@@ -3,411 +3,234 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>P2PTube - WebTorrent Streaming</title>
-    <!-- Import WebTorrent Library -->
-    <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
+    <title>Secure P2P YouTube Clone</title>
+    <!-- PeerJS for WebRTC (Secure CDN) -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        :root {
-            --primary: #3ea6ff;
-            --bg: #0f0f0f;
-            --surface: #272727;
-            --text: #ffffff;
-            --gray: #aaaaaa;
-        }
-
-        body {
-            margin: 0;
-            font-family: Roboto, Arial, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
+        :root { --red: #ff0000; --bg: #0f0f0f; --card: #1f1f1f; --text: #fff; }
+        body { margin: 0; background: var(--bg); color: var(--text); font-family: sans-serif; height: 100vh; display: flex; flex-direction: column; }
+        
         /* Navbar */
-        nav {
-            background-color: #202020;
-            padding: 0.7rem 2rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-bottom: 1px solid #333;
-            height: 56px;
-        }
-
-        .brand {
-            font-size: 1.2rem;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            cursor: pointer;
-        }
+        header { background: #202020; padding: 15px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-weight: bold; font-size: 1.2rem; }
+        .logo span { color: var(--red); }
         
-        .brand span { color: #ff0000; font-size: 1.5rem; }
-
-        .search-container {
-            flex: 1;
-            max-width: 600px;
-            display: flex;
-            margin: 0 20px;
-        }
-
-        input[type="text"] {
-            width: 100%;
-            background: #121212;
-            border: 1px solid #333;
-            color: white;
-            padding: 10px;
-            border-radius: 20px 0 0 20px;
-            outline: none;
-            font-size: 1rem;
-        }
-
-        input[type="text"]:focus { border-color: #1c62b9; }
-
-        .search-btn {
-            background: #333;
-            border: 1px solid #333;
-            border-left: none;
-            color: var(--gray);
-            padding: 0 20px;
-            border-radius: 0 20px 20px 0;
-            cursor: pointer;
-        }
+        /* Main Layout */
+        .main { display: flex; flex: 1; height: 100%; }
         
-        .search-btn:hover { background: #444; color: white; }
-
-        /* Layout */
-        .container {
-            display: flex;
-            flex: 1;
-            overflow: hidden;
-        }
-
-        /* Sidebar / Upload Area */
-        .sidebar {
-            width: 300px;
-            background: #151515;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            border-right: 1px solid #333;
-        }
-
-        .upload-card {
-            background: var(--surface);
-            padding: 20px;
-            border-radius: 12px;
-            text-align: center;
-        }
-
-        .btn-upload {
-            background: var(--surface);
-            color: var(--primary);
-            border: 1px solid var(--primary);
-            padding: 10px 20px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-weight: bold;
-            margin-top: 10px;
-            text-transform: uppercase;
-            font-size: 0.9rem;
-        }
-
-        .btn-upload:hover { background: #263850; }
-
-        #file-input { display: none; }
-
-        /* Stats & Info */
-        .info-box {
-            font-size: 0.85rem;
-            color: var(--gray);
-            word-break: break-all;
-            background: #000;
-            padding: 10px;
-            border-radius: 4px;
-            margin-top: 10px;
-            display: none;
-        }
-
-        .share-link-group {
-            display: flex;
-            gap: 5px;
-            margin-top: 5px;
-        }
-
-        .copy-btn {
-            background: var(--primary);
-            border: none;
-            color: black;
-            font-weight: bold;
-            cursor: pointer;
-            padding: 5px 10px;
-            border-radius: 4px;
-        }
-
-        /* Main Video Player */
-        .main-content {
-            flex: 1;
-            padding: 30px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            overflow-y: auto;
-        }
-
-        #player-wrapper {
-            width: 100%;
-            max-width: 1000px;
-            aspect-ratio: 16/9;
-            background: black;
-            border-radius: 12px;
-            overflow: hidden;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-        }
-
-        video {
-            width: 100%;
-            height: 100%;
-        }
-
-        .placeholder-text {
-            color: #555;
-            text-align: center;
-        }
-
-        .meta-data {
-            width: 100%;
-            max-width: 1000px;
-            margin-top: 20px;
-        }
-
-        h1 { font-size: 1.5rem; margin: 0 0 10px 0; }
+        /* Sidebar Controls */
+        .sidebar { width: 300px; background: #151515; padding: 20px; border-right: 1px solid #333; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
+        .card { background: var(--card); padding: 15px; border-radius: 8px; border: 1px solid #333; }
+        h3 { margin-top: 0; font-size: 1rem; }
         
-        .stats-bar {
-            display: flex;
-            gap: 20px;
-            font-size: 0.9rem;
-            color: var(--gray);
-            border-bottom: 1px solid #333;
-            padding-bottom: 20px;
-        }
-
-        .badge {
-            background: #333;
-            padding: 2px 6px;
-            border-radius: 4px;
-            color: white;
-            font-size: 0.7rem;
-        }
-
-        /* Toast Notification */
-        #toast {
-            visibility: hidden;
-            min-width: 250px;
-            background-color: #333;
-            color: #fff;
-            text-align: center;
-            border-radius: 4px;
-            padding: 16px;
-            position: fixed;
-            z-index: 1;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            box-shadow: 0px 4px 10px rgba(0,0,0,0.5);
-        }
-
-        #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
-
-        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
-        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+        input[type="text"] { width: 100%; padding: 8px; background: #000; color: #fff; border: 1px solid #333; box-sizing: border-box; margin-bottom: 10px; }
+        button { width: 100%; padding: 10px; border: none; font-weight: bold; cursor: pointer; border-radius: 4px; }
+        .btn-red { background: var(--red); color: white; }
+        .btn-gray { background: #333; color: white; }
+        
+        /* Video Player */
+        .content { flex: 1; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #000; position: relative; }
+        video { width: 100%; max-width: 1000px; max-height: 80vh; background: #000; }
+        
+        /* Debug Console */
+        #console { font-family: monospace; font-size: 0.8rem; color: #0f0; background: #000; padding: 10px; border-radius: 4px; height: 150px; overflow-y: auto; margin-top: 10px; border: 1px solid #333; }
+        
+        /* Secret Canvas for Compatibility */
+        canvas { display: none; } 
     </style>
 </head>
 <body>
 
-<nav>
-    <div class="brand" onclick="location.reload()">
-        <span>&#9654;</span> P2PTube
-    </div>
-    <div class="search-container">
-        <input type="text" id="magnet-input" placeholder="Paste Video Link (Magnet URI) here...">
-        <button class="search-btn" onclick="loadVideo()">&#128269;</button>
-    </div>
-    <div style="width: 100px;"></div> <!-- Spacer -->
-</nav>
+<header>
+    <div class="logo"><span>&#9654;</span> Youtube P2P (HTTPS Fix)</div>
+    <div id="my-peer-id" style="font-family: monospace; font-size: 0.9rem; color: #aaa;">Connecting to server...</div>
+</header>
 
-<div class="container">
-    <!-- Sidebar -->
+<div class="main">
     <div class="sidebar">
-        <div class="upload-card">
-            <h3>Create Broadcast</h3>
-            <p style="color:var(--gray); font-size:0.9rem;">Select a video file to start seeding.</p>
-            <button class="btn-upload" onclick="document.getElementById('file-input').click()">
-                Select Video
-            </button>
-            <input type="file" id="file-input" accept="video/*">
+        <!-- Broadcaster -->
+        <div class="card">
+            <h3>🔴 Broadcast</h3>
+            <input type="file" id="fileInput" accept="video/*">
+            <button class="btn-red" onclick="startBroadcast()" style="margin-top:5px;">Start Broadcast</button>
+            <div style="font-size: 0.8rem; color: #aaa; margin-top: 5px;">
+                1. Select File<br>
+                2. Click Start<br>
+                3. Copy ID from top right
+            </div>
         </div>
 
-        <!-- Seeding Info (Hidden until active) -->
-        <div id="seed-info" class="info-box">
-            <div style="color:white; font-weight:bold; margin-bottom:5px;">You are Live!</div>
-            <div style="margin-bottom:5px;">Share this ID:</div>
-            
-            <div class="share-link-group">
-                <input type="text" id="share-link" readonly style="width:100px; border-radius:4px; font-size:0.7rem;">
-                <button class="copy-btn" onclick="copyLink()">Copy</button>
-            </div>
-            
-            <div style="margin-top:10px;">
-                Peers: <span id="num-peers" style="color:var(--primary)">0</span><br>
-                Speed: <span id="upload-speed">0 KB/s</span>
-            </div>
+        <!-- Viewer -->
+        <div class="card">
+            <h3>👀 Watch</h3>
+            <input type="text" id="remoteId" placeholder="Paste Broadcaster ID">
+            <button class="btn-gray" onclick="joinStream()">Watch Stream</button>
         </div>
+
+        <!-- Debug -->
+        <div id="console">System Ready...</div>
     </div>
 
-    <!-- Main Content -->
-    <div class="main-content">
-        <div id="player-wrapper">
-            <div class="placeholder-text">
-                <h2>No Video Loaded</h2>
-                <p>Paste a link above or upload a video on the left.</p>
-            </div>
-        </div>
-
-        <div class="meta-data">
-            <h1 id="video-title">...</h1>
-            <div class="stats-bar">
-                <span id="download-speed">Speed: 0 KB/s</span>
-                <span id="downloaded">Downloaded: 0 MB</span>
-                <span class="badge">P2P</span>
-            </div>
-        </div>
+    <div class="content">
+        <!-- The Video Player -->
+        <video id="videoPlayer" controls playsinline></video>
+        <!-- Invisible Canvas for processing video if needed -->
+        <canvas id="canvasProcessor"></canvas>
     </div>
 </div>
 
-<div id="toast">Link copied to clipboard!</div>
-
 <script>
-    // Initialize WebTorrent Client
-    const client = new WebTorrent();
+    // --- VARIABLES ---
+    let peer;
+    let localStream;
+    const logBox = document.getElementById('console');
+    const myIdDisplay = document.getElementById('my-peer-id');
+    const videoPlayer = document.getElementById('videoPlayer');
+    const canvas = document.getElementById('canvasProcessor');
+    const ctx = canvas.getContext('2d');
 
-    // DOM Elements
-    const fileInput = document.getElementById('file-input');
-    const seedInfo = document.getElementById('seed-info');
-    const shareLinkInput = document.getElementById('share-link');
-    const numPeersEl = document.getElementById('num-peers');
-    const uploadSpeedEl = document.getElementById('upload-speed');
-    
-    // Player DOM
-    const playerWrapper = document.getElementById('player-wrapper');
-    const videoTitle = document.getElementById('video-title');
-    const downloadSpeedEl = document.getElementById('download-speed');
-    const downloadedEl = document.getElementById('downloaded');
+    // --- LOGGING ---
+    function log(msg) {
+        const line = document.createElement('div');
+        line.textContent = `> ${msg}`;
+        logBox.appendChild(line);
+        logBox.scrollTop = logBox.scrollHeight;
+        console.log(msg);
+    }
 
-    // --- UPLOAD / SEED LOGIC ---
-    fileInput.addEventListener('change', function(e) {
-        const file = this.files[0];
-        if (!file) return;
-
-        // Clear previous tasks
-        client.torrents.forEach(t => t.destroy());
-
-        // Start seeding
-        client.seed(file, function(torrent) {
-            console.log('Client is seeding:', torrent.magnetURI);
-            
-            // Update UI
-            seedInfo.style.display = 'block';
-            shareLinkInput.value = torrent.magnetURI;
-            videoTitle.innerText = file.name;
-            
-            // Auto-play local file
-            renderFile(torrent.files[0]);
-
-            // Monitoring
-            setInterval(() => {
-                numPeersEl.innerText = torrent.numPeers;
-                uploadSpeedEl.innerText = prettify(torrent.uploadSpeed) + '/s';
-            }, 1000);
-        });
+    // --- INITIALIZE PEER (SECURE) ---
+    // We use a random ID. The 'secure: true' is default for the public cloud, but explicit here.
+    peer = new Peer(null, {
+        debug: 1,
+        secure: true 
     });
 
-    // --- VIEW / DOWNLOAD LOGIC ---
-    function loadVideo() {
-        const magnetURI = document.getElementById('magnet-input').value.trim();
-        if (!magnetURI) return;
+    peer.on('open', (id) => {
+        log(`My ID: ${id}`);
+        myIdDisplay.textContent = `ID: ${id}`;
+        myIdDisplay.style.color = '#fff';
+        myIdDisplay.style.userSelect = 'text';
+    });
 
-        // Clear previous
-        playerWrapper.innerHTML = '<div class="placeholder-text">Loading stream...</div>';
+    peer.on('error', (err) => {
+        log(`ERROR: ${err.type} - ${err.message}`);
+    });
+
+    // --- RECEIVE CALL (BROADCASTER LOGIC) ---
+    // When a viewer calls, we answer with our stream
+    peer.on('call', (call) => {
+        log('Viewer is calling...');
+        if (localStream) {
+            call.answer(localStream);
+            log('Sent stream to viewer.');
+        } else {
+            log('Error: No stream to send! (Did you start broadcast?)');
+        }
+    });
+
+    // --- BROADCAST FUNCTION ---
+    async function startBroadcast() {
+        const fileInput = document.getElementById('fileInput');
+        const file = fileInput.files[0];
+
+        if (!file) return log('Please select a video file first.');
+
+        // 1. Play Video Locally
+        const url = URL.createObjectURL(file);
+        videoPlayer.src = url;
+        videoPlayer.muted = true; // Required for autoplay
         
-        // Add Torrent
-        client.add(magnetURI, function(torrent) {
-            console.log('Client is downloading:', torrent.infoHash);
+        try {
+            await videoPlayer.play();
+            log('Video playing locally.');
+        } catch (e) {
+            log('Autoplay blocked. Please click play on the video.');
+        }
 
-            // Find the video file
-            const file = torrent.files.find(f => f.name.endsWith('.mp4') || f.name.endsWith('.webm') || f.name.endsWith('.mkv') || f.name.endsWith('.mov'));
+        // 2. Capture Stream
+        // We try standard capture first, then Firefox specific, then Canvas fallback
+        if (videoPlayer.captureStream) {
+            localStream = videoPlayer.captureStream();
+            log('Standard captureStream success.');
+        } else if (videoPlayer.mozCaptureStream) {
+            localStream = videoPlayer.mozCaptureStream();
+            log('Firefox captureStream success.');
+        } else {
+            log('Native capture failed. Using Canvas fallback (CPU intensive).');
+            startCanvasStream();
+        }
 
-            if(file) {
-                videoTitle.innerText = file.name;
-                renderFile(file);
-            } else {
-                playerWrapper.innerHTML = '<div class="placeholder-text">Error: No video file found in link.</div>';
+        log('Broadcast is Live! Share your ID.');
+    }
+
+    // --- CANVAS FALLBACK (For Safari/Compat) ---
+    function startCanvasStream() {
+        // Match canvas size to video
+        canvas.width = videoPlayer.videoWidth || 640;
+        canvas.height = videoPlayer.videoHeight || 360;
+        
+        // Loop drawing
+        function draw() {
+            if (!videoPlayer.paused && !videoPlayer.ended) {
+                ctx.drawImage(videoPlayer, 0, 0, canvas.width, canvas.height);
             }
+            requestAnimationFrame(draw);
+        }
+        draw();
 
-            // Monitoring
-            setInterval(() => {
-                downloadSpeedEl.innerText = 'Speed: ' + prettify(torrent.downloadSpeed) + '/s';
-                downloadedEl.innerText = 'Downloaded: ' + (torrent.downloaded / 1024 / 1024).toFixed(1) + ' MB';
-            }, 1000);
+        // Capture from canvas
+        localStream = canvas.captureStream(30); // 30 FPS
+        
+        // Try to add audio track from video if possible (AudioContext magic)
+        // Note: Simple canvas capture is video-only. 
+        // Audio extraction in single-file without CORS issues is hard.
+        log('Warning: Canvas fallback is Video-Only (No Audio).');
+    }
+
+    // --- WATCH FUNCTION (VIEWER LOGIC) ---
+    function joinStream() {
+        const remoteId = document.getElementById('remoteId').value.trim();
+        if (!remoteId) return log('Enter an ID.');
+
+        log(`Connecting to ${remoteId}...`);
+
+        // We call the broadcaster. 
+        // We send a dummy stream or null because we just want to receive.
+        const call = peer.call(remoteId, createEmptyAudioStream());
+
+        call.on('stream', (remoteStream) => {
+            log('Stream received!');
+            
+            videoPlayer.srcObject = remoteStream;
+            videoPlayer.muted = false;
+            
+            const p = videoPlayer.play();
+            if (p !== undefined) {
+                p.catch(error => {
+                    log('Auto-Play blocked by browser. CLICK PLAY on the video bar!');
+                });
+            }
+        });
+
+        call.on('error', (err) => {
+            log('Call Error: ' + err);
+        });
+        
+        // Close handler
+        call.on('close', () => {
+            log('Broadcast ended.');
         });
     }
 
-    // --- HELPER: Render Video to Player ---
-    function renderFile(file) {
-        // Clear wrapper
-        playerWrapper.innerHTML = '';
-        
-        // Create Video Element
-        const video = document.createElement('video');
-        video.controls = true;
-        video.autoplay = true;
-        
-        // Append to DOM first (WebTorrent needs this)
-        playerWrapper.appendChild(video);
-        
-        // Stream the file!
-        file.renderTo(video);
+    // --- HELPER: Create Dummy Audio (Required to initiate some calls) ---
+    function createEmptyAudioStream() {
+        const ctx = new AudioContext();
+        const oscillator = ctx.createOscillator();
+        const dst = oscillator.connect(ctx.createMediaStreamDestination());
+        oscillator.start();
+        return dst.stream;
     }
 
-    // --- UTILITIES ---
-    function copyLink() {
-        const link = document.getElementById('share-link');
-        link.select();
-        link.setSelectionRange(0, 99999); // Mobile support
-        navigator.clipboard.writeText(link.value);
-        showToast();
-    }
-
-    function prettify(num) {
-        if (num < 1024) return num + ' B';
-        if (num < 1024*1024) return (num/1024).toFixed(1) + ' KB';
-        return (num/(1024*1024)).toFixed(1) + ' MB';
-    }
-
-    function showToast() {
-        var x = document.getElementById("toast");
-        x.className = "show";
-        setTimeout(function(){ x.className = x.className.replace("show", ""); }, 3000);
-    }
 </script>
-
 </body>
 </html>
